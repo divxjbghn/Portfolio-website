@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Solutions & Project Store [Junaed Ahammed]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        /* কালার ভেরিয়েবল সেটআপ */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #000000;
+            --card-bg: #ffffff;
+            --primary-color: #0d6efd;
+            --secondary-text: #6c757d;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0b0f19;
+            --text-color: #ffffff;
+            --card-bg: #1e293b;
+            --primary-color: #3b82f6;
+            --secondary-text: #94a3b8;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Poppins', sans-serif; 
+            transition: all 0.3s ease;
+        }
+
+        /* ডার্ক মোড সুইচ বাটন */
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .hero { padding: 80px 0 40px; text-align: center; }
+        .profile-img { 
+            width: 150px; height: 150px; 
+            border-radius: 50%; 
+            border: 4px solid var(--primary-color); 
+            object-fit: cover; 
+        }
+
+        .custom-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 20px; 
+            border: none; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            height: 100%;
+            transition: transform 0.3s;
+        }
+
+        .custom-card:hover { transform: translateY(-5px); }
+        .price-tag { color: #25d366; font-weight: bold; font-size: 1.1rem; }
+        .opacity-75 { color: var(--text-color) !important; }
+        
+        .social-icons a { 
+            font-size: 24px; 
+            margin: 0 10px; 
+            color: var(--primary-color); 
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+<button class="theme-switch" onclick="toggleTheme()">
+    <i id="themeIcon" class="fas fa-moon"></i> <span id="themeText">Dark mode</span>
+</button>
+
+<section class="hero container">
+    <img id="displayImg" src="https://via.placeholder.com/150" class="profile-img mb-3">
+    <h1 id="displayName" class="fw-bold text-primary">loading...</h1>
+    <p id="displayBio" class="opacity-75 col-md-8 mx-auto"></p>
+    <div class="social-icons" id="socialBox"></div>
+</section>
+
+<div class="container my-5">
+    <h3 class="mb-4 fw-bold"><i class="fas fa-certificate text-warning me-2"></i> My Certificates and Achievements</h3>
+    <div class="row g-4" id="certContainer"></div>
+</div>
+
+<div class="container my-5">
+    <h3 class="mb-4 fw-bold"><i class="fas fa-code text-primary me-2"></i> My projects</h3>
+    <div class="row g-4" id="projectContainer"></div>
+</div>
+
+<script>
+    // ফায়ারবেস কনফিগারেশন
+    const firebaseConfig = {
+            apiKey: "AIzaSyAQH08rnZx8j71zAKLNGSyBBovNJI0q5gM",
+            authDomain: "...",
+            projectId: "bd-clen.firebaseapp.com",
+            storageBucket: "bd-clen.firebasestorage.app",
+            messagingSenderId: "735603808920",
+            appId: "1:735603808920:web:59f88921b18840e0430eed",
+            // --- নতুন: আপনার Realtime Database URL যোগ করুন ---
+            databaseURL: "https://bd-clen-default-rtdb.firebaseio.com/"
+        };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- থিম কন্ট্রোল ফাংশন ---
+    function toggleTheme() {
+        const currentTheme = document.body.getAttribute('data-theme');
+        const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(targetTheme);
+    }
+
+    function setTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        const icon = document.getElementById('themeIcon');
+        const text = document.getElementById('themeText');
+        
+        if(theme === 'dark') {
+            icon.className = 'fas fa-moon';
+            text.innerText = 'ডার্ক মোড';
+        } else {
+            icon.className = 'fas fa-sun';
+            text.innerText = 'লাইট মোড';
+        }
+    }
+
+    // পেজ লোড হওয়ার সময় আগের থিম চেক করা
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+
+    // --- ডাটা লোড করা ---
+    db.ref('profile').on('value', snap => {
+        const d = snap.val();
+        if(d) {
+            document.getElementById('displayName').innerText = d.name;
+            document.getElementById('displayImg').src = d.img;
+            document.getElementById('displayBio').innerText = d.bio;
+            document.getElementById('socialBox').innerHTML = `
+                <a href="${d.fb}" target="_blank"><i class="fab fa-facebook"></i></a>
+                <a href="${d.ln}" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://wa.me/${d.wa}" target="_blank"><i class="fab fa-whatsapp"></i></a>
+            `;
+        }
+    });
+
+    db.ref('certificates').on('value', snap => {
+        const container = document.getElementById('certContainer');
+        container.innerHTML = "";
+        snap.forEach(child => {
+            const c = child.val();
+            container.innerHTML += `
+            <div class="col-6 col-md-3">
+                <div class="custom-card text-center">
+                    <img src="${c.img}" class="w-100 rounded mb-2" style="height:120px; object-fit:cover;">
+                    <p class="small fw-bold mb-0">${c.title}</p>
+                </div>
+            </div>`;
+        });
+    });
+
+    db.ref('projects').on('value', snap => {
+        const container = document.getElementById('projectContainer');
+        container.innerHTML = "";
+        snap.forEach(child => {
+            const p = child.val();
+            container.innerHTML += `
+            <div class="col-md-4">
+                <div class="custom-card">
+                    <img src="${p.img}" class="w-100 rounded mb-3" style="height:180px; object-fit:cover;">
+                    <h5 class="fw-bold">${p.title}</h5>
+                    <p class="price-tag">Price: ${p.price}</p>
+                    <div class="d-flex gap-2">
+                        <a href="${p.live}" target="_blank" class="btn btn-outline-primary btn-sm flex-fill">Live preview</a>
+                        <a href="https://wa.me/8801326806663?text=I want to buy: ${p.title}" class="btn btn-success btn-sm flex-fill">Buy now</a>
+                    </div>
+                </div>
+            </div>`;
+        });
+    });
+</script>
+</body>
+</html>
